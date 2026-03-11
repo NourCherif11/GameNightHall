@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     console.log('🔐 [AUTH] Checking session...')
-    
+
     // Check active session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
@@ -18,6 +18,7 @@ export function AuthProvider({ children }) {
           id: session.user.id,
           email: session.user.email,
           name: session.user.user_metadata?.name || session.user.email.split('@')[0] || 'Admin',
+          role: session.user.user_metadata?.role || 'admin', // Default to 'admin' if no role set
         })
       } else {
         console.log('ℹ️ [AUTH] No active session')
@@ -33,6 +34,7 @@ export function AuthProvider({ children }) {
           id: session.user.id,
           email: session.user.email,
           name: session.user.user_metadata?.name || session.user.email.split('@')[0] || 'Admin',
+          role: session.user.user_metadata?.role || 'admin',
         })
       } else {
         setUser(null)
@@ -60,6 +62,7 @@ export function AuthProvider({ children }) {
         id: data.user.id,
         email: data.user.email,
         name: data.user.user_metadata?.name || data.user.email.split('@')[0] || 'Admin',
+        role: data.user.user_metadata?.role || 'admin',
       })
       return { success: true }
     } catch (error) {
@@ -75,8 +78,32 @@ export function AuthProvider({ children }) {
     console.log('✅ [AUTH] Logged out successfully')
   }
 
+  const refreshUser = async () => {
+    console.log('🔄 [AUTH] Refreshing user data...')
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession()
+      
+      if (error) {
+        console.error('❌ [AUTH] Refresh failed:', error.message)
+        return
+      }
+      
+      if (session?.user) {
+        console.log('✅ [AUTH] User data refreshed')
+        setUser({
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.user_metadata?.name || session.user.email.split('@')[0] || 'Admin',
+          role: session.user.user_metadata?.role || 'admin',
+        })
+      }
+    } catch (error) {
+      console.error('❌ [AUTH] Refresh error:', error)
+    }
+  }
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, refreshUser, loading }}>
       {children}
     </AuthContext.Provider>
   )
@@ -86,4 +113,10 @@ export function useAuth() {
   const ctx = useContext(AuthContext)
   if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
+}
+
+// Helper hook to check if user is superadmin
+export function useIsSuperAdmin() {
+  const { user } = useAuth()
+  return user?.role === 'superadmin'
 }

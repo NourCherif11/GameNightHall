@@ -4,7 +4,7 @@ import path from 'path'
 
 export default defineConfig({
   plugins: [react()],
-  base: '/pool-club-manager/', // Update this to match your GitHub repo name
+  base: '/gameparksousse/', // Must match your GitHub repo name exactly!
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

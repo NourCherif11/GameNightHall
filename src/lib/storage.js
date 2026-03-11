@@ -65,7 +65,7 @@ export async function getSettings() {
     return {
       hourlyRate: 10,
       currency: 'TND',
-      clubName: 'Break Gaming',
+      clubName: 'GamePark',
       tableCount: 4,
     }
   }
@@ -90,40 +90,435 @@ export async function updateSettings(updates) {
   }
 }
 
-// ==================== TABLE NAMES ====================
-export async function getTableNames() {
+// ==================== COUNTERS ====================
+export async function getCounters() {
+  console.log('📖 [STORAGE] Fetching counters from Supabase...')
   try {
     const { data, error } = await supabase
-      .from('table_names')
-      .select('id, name')
-      .order('id')
+      .from('counters')
+      .select('*')
+      .order('order_index')
 
     if (error) throw error
 
-    // Convert to object { 1: 'Table 1', 2: 'Table 2', ... }
-    const names = {}
-    data.forEach(row => {
-      names[row.id] = row.name
-    })
-    return names
+    console.log(`✅ [STORAGE] ${data.length} counters loaded`)
+    return data.map(c => ({
+      id: c.id,
+      name: c.name,
+      type: c.type,
+      orderIndex: c.order_index,
+      createdAt: c.created_at,
+      // State fields from DB
+      active: c.active || false,
+      startTime: c.start_time || null,
+      drinks: c.drinks || [],
+      startedBy: c.started_by || null,
+    }))
   } catch (error) {
-    console.error('Error fetching table names:', error)
-    return {}
+    console.error('❌ [STORAGE] Error fetching counters:', error)
+    return []
   }
 }
 
-export async function saveTableName(tableId, name) {
+export async function addCounter(counter) {
+  console.log('➕ [STORAGE] Adding counter:', counter.name)
   try {
-    const { error } = await supabase
-      .from('table_names')
-      .update({ name })
-      .eq('id', tableId)
+    const { data, error } = await supabase
+      .from('counters')
+      .insert({
+        name: counter.name,
+        type: counter.type,
+        order_index: counter.orderIndex,
+      })
+      .select()
+      .single()
 
     if (error) throw error
+
+    console.log('✅ [STORAGE] Counter added successfully:', data.id)
+    return {
+      id: data.id,
+      name: data.name,
+      type: data.type,
+      orderIndex: data.order_index,
+      createdAt: data.created_at,
+    }
+  } catch (error) {
+    console.error('❌ [STORAGE] Error adding counter:', error)
+    return null
+  }
+}
+
+export async function updateCounter(counterId, updates) {
+  console.log('✏️ [STORAGE] Updating counter:', counterId)
+  try {
+    const dbUpdates = {}
+    if ('name' in updates) dbUpdates.name = updates.name
+    if ('type' in updates) dbUpdates.type = updates.type
+    if ('orderIndex' in updates) dbUpdates.order_index = updates.orderIndex
+
+    const { data, error } = await supabase
+      .from('counters')
+      .update(dbUpdates)
+      .eq('id', counterId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    console.log('✅ [STORAGE] Counter updated successfully')
+    return {
+      id: data.id,
+      name: data.name,
+      type: data.type,
+      orderIndex: data.order_index,
+      createdAt: data.created_at,
+    }
+  } catch (error) {
+    console.error('❌ [STORAGE] Error updating counter:', error)
+    return null
+  }
+}
+
+export async function deleteCounter(counterId) {
+  console.log('🗑️ [STORAGE] Deleting counter:', counterId)
+  try {
+    const { error } = await supabase
+      .from('counters')
+      .delete()
+      .eq('id', counterId)
+
+    if (error) throw error
+
+    console.log('✅ [STORAGE] Counter deleted successfully')
     return true
   } catch (error) {
-    console.error('Error saving table name:', error)
+    console.error('❌ [STORAGE] Error deleting counter:', error)
     return false
+  }
+}
+
+// Update counter state (active/inactive with start time and drinks)
+export async function updateCounterState(counterId, stateUpdate) {
+  console.log('🔄 [STORAGE] Updating counter state:', counterId, stateUpdate)
+  try {
+    const updateData = {
+      active: stateUpdate.active,
+      start_time: stateUpdate.startTime,
+      drinks: stateUpdate.drinks || [],
+    }
+    
+    // Include started_by if provided (null to clear, value to set)
+    if ('startedBy' in stateUpdate) {
+      updateData.started_by = stateUpdate.startedBy
+    }
+    
+    const { data, error } = await supabase
+      .from('counters')
+      .update(updateData)
+      .eq('id', counterId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    console.log('✅ [STORAGE] Counter state updated successfully')
+    return {
+      id: data.id,
+      name: data.name,
+      type: data.type,
+      orderIndex: data.order_index,
+      active: data.active,
+      startTime: data.start_time,
+      drinks: data.drinks || [],
+      startedBy: data.started_by || null,
+    }
+  } catch (error) {
+    console.error('❌ [STORAGE] Error updating counter state:', error)
+    return null
+  }
+}
+
+// ==================== COUNTER SETTINGS ====================
+export async function getCounterSettings() {
+  console.log('📖 [STORAGE] Fetching counter settings from Supabase...')
+  try {
+    const { data, error } = await supabase
+      .from('counter_settings')
+      .select('*')
+
+    if (error) throw error
+
+    console.log('✅ [STORAGE] Counter settings loaded:', data)
+
+    // Convert array to object keyed by counter_type
+    const settings = {}
+    data.forEach(row => {
+      settings[row.counter_type] = {
+        startingValue: parseFloat(row.starting_value),
+        incrementAmount: parseFloat(row.increment_amount),
+        incrementInterval: parseFloat(row.increment_interval_seconds),
+        gracePeriod: row.grace_period_seconds != null ? parseFloat(row.grace_period_seconds) : 0,
+      }
+    })
+
+    return settings
+  } catch (error) {
+    console.error('❌ [STORAGE] Error fetching counter settings:', error)
+    // Return defaults (in seconds)
+    return {
+      billard: {
+        startingValue: 0,
+        incrementAmount: 2,
+        incrementInterval: 900,
+        gracePeriod: 300,
+      },
+      playstation: {
+        startingValue: 1,
+        incrementAmount: 1,
+        incrementInterval: 600,
+        gracePeriod: 0,
+      },
+    }
+  }
+}
+
+export async function updateCounterSettings(counterType, settings) {
+  console.log('✏️ [STORAGE] Updating counter settings for:', counterType)
+  try {
+    // First, check if the row exists
+    const { data: existing } = await supabase
+      .from('counter_settings')
+      .select('counter_type')
+      .eq('counter_type', counterType)
+      .maybeSingle()
+
+    let data, error
+
+    if (existing) {
+      // Update existing row
+      const result = await supabase
+        .from('counter_settings')
+        .update({
+          starting_value: settings.startingValue,
+          increment_amount: settings.incrementAmount,
+          increment_interval_seconds: settings.incrementInterval,
+          grace_period_seconds: settings.gracePeriod || 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('counter_type', counterType)
+        .select()
+        .single()
+
+      data = result.data
+      error = result.error
+    } else {
+      // Insert new row
+      const result = await supabase
+        .from('counter_settings')
+        .insert({
+          counter_type: counterType,
+          starting_value: settings.startingValue,
+          increment_amount: settings.incrementAmount,
+          increment_interval_seconds: settings.incrementInterval,
+          grace_period_seconds: settings.gracePeriod || 0,
+        })
+        .select()
+        .single()
+
+      data = result.data
+      error = result.error
+    }
+
+    if (error) throw error
+
+    console.log('✅ [STORAGE] Counter settings updated successfully')
+    return {
+      success: true,
+      data: {
+        startingValue: parseFloat(data.starting_value),
+        incrementAmount: parseFloat(data.increment_amount),
+        incrementInterval: parseFloat(data.increment_interval_seconds),
+        gracePeriod: data.grace_period_seconds != null ? parseFloat(data.grace_period_seconds) : 0,
+      }
+    }
+  } catch (error) {
+    console.error('❌ [STORAGE] Error updating counter settings:', error)
+    return {
+      success: false,
+      error: error.message || 'Erreur lors de la mise à jour des paramètres'
+    }
+  }
+}
+
+// ==================== DRINKS ====================
+export async function getDrinks() {
+  console.log('📖 [STORAGE] Fetching drinks from Supabase...')
+  try {
+    const { data, error } = await supabase
+      .from('drinks')
+      .select('*')
+      .order('category, name')
+
+    if (error) throw error
+
+    console.log(`✅ [STORAGE] ${data.length} drinks loaded`)
+    return data.map(d => ({
+      id: d.id,
+      name: d.name,
+      price: parseFloat(d.price),
+      category: d.category,
+      available: d.available,
+      createdAt: d.created_at,
+    }))
+  } catch (error) {
+    console.error('❌ [STORAGE] Error fetching drinks:', error)
+    return []
+  }
+}
+
+export async function addDrink(drink) {
+  console.log('➕ [STORAGE] Adding drink:', drink.name)
+  try {
+    const { data, error } = await supabase
+      .from('drinks')
+      .insert({
+        name: drink.name,
+        price: drink.price,
+        category: drink.category || 'other',
+        available: drink.available !== undefined ? drink.available : true,
+      })
+      .select()
+      .single()
+
+    if (error) throw error
+
+    console.log('✅ [STORAGE] Drink added successfully:', data.id)
+    return {
+      id: data.id,
+      name: data.name,
+      price: parseFloat(data.price),
+      category: data.category,
+      available: data.available,
+      createdAt: data.created_at,
+    }
+  } catch (error) {
+    console.error('❌ [STORAGE] Error adding drink:', error)
+    return null
+  }
+}
+
+export async function updateDrink(drinkId, updates) {
+  console.log('✏️ [STORAGE] Updating drink:', drinkId)
+  try {
+    const dbUpdates = { updated_at: new Date().toISOString() }
+    if ('name' in updates) dbUpdates.name = updates.name
+    if ('price' in updates) dbUpdates.price = updates.price
+    if ('category' in updates) dbUpdates.category = updates.category
+    if ('available' in updates) dbUpdates.available = updates.available
+
+    const { data, error } = await supabase
+      .from('drinks')
+      .update(dbUpdates)
+      .eq('id', drinkId)
+      .select()
+      .single()
+
+    if (error) throw error
+
+    console.log('✅ [STORAGE] Drink updated successfully')
+    return {
+      id: data.id,
+      name: data.name,
+      price: parseFloat(data.price),
+      category: data.category,
+      available: data.available,
+      createdAt: data.created_at,
+    }
+  } catch (error) {
+    console.error('❌ [STORAGE] Error updating drink:', error)
+    return null
+  }
+}
+
+export async function deleteDrink(drinkId) {
+  console.log('🗑️ [STORAGE] Deleting drink:', drinkId)
+  try {
+    const { error } = await supabase
+      .from('drinks')
+      .delete()
+      .eq('id', drinkId)
+
+    if (error) throw error
+
+    console.log('✅ [STORAGE] Drink deleted successfully')
+    return true
+  } catch (error) {
+    console.error('❌ [STORAGE] Error deleting drink:', error)
+    return false
+  }
+}
+
+// ==================== BILL ITEMS ====================
+export async function getBillItems(billId) {
+  try {
+    const { data, error } = await supabase
+      .from('bill_items')
+      .select('*')
+      .eq('bill_id', billId)
+      .order('created_at')
+
+    if (error) throw error
+
+    return data.map(item => ({
+      id: item.id,
+      billId: item.bill_id,
+      itemType: item.item_type,
+      itemName: item.item_name,
+      quantity: item.quantity,
+      unitPrice: parseFloat(item.unit_price),
+      totalPrice: parseFloat(item.total_price),
+      createdAt: item.created_at,
+    }))
+  } catch (error) {
+    console.error('❌ [STORAGE] Error fetching bill items:', error)
+    return []
+  }
+}
+
+export async function addBillItems(billId, items) {
+  console.log('➕ [STORAGE] Adding bill items for bill:', billId)
+  try {
+    const itemsToInsert = items.map(item => ({
+      bill_id: billId,
+      item_type: item.itemType,
+      item_name: item.itemName,
+      quantity: item.quantity || 1,
+      unit_price: item.unitPrice,
+      total_price: (item.quantity || 1) * item.unitPrice,
+    }))
+
+    const { data, error } = await supabase
+      .from('bill_items')
+      .insert(itemsToInsert)
+      .select()
+
+    if (error) throw error
+
+    console.log(`✅ [STORAGE] ${data.length} bill items added successfully`)
+    return data.map(item => ({
+      id: item.id,
+      billId: item.bill_id,
+      itemType: item.item_type,
+      itemName: item.item_name,
+      quantity: item.quantity,
+      unitPrice: parseFloat(item.unit_price),
+      totalPrice: parseFloat(item.total_price),
+      createdAt: item.created_at,
+    }))
+  } catch (error) {
+    console.error('❌ [STORAGE] Error adding bill items:', error)
+    return null
   }
 }
 
@@ -232,8 +627,11 @@ export async function getBills() {
 
     return data.map(b => ({
       id: b.id,
-      tableNumber: b.table_number,
+      counterId: b.counter_id,
+      counterType: b.counter_type,
+      tableNumber: b.table_number, // Keep for backward compatibility
       playerName: b.player_name,
+      cashierName: b.cashier_name,
       startTime: b.start_time,
       endTime: b.end_time,
       duration: b.duration,
@@ -241,6 +639,7 @@ export async function getBills() {
       paid: b.paid,
       paidAt: b.paid_at,
       createdAt: b.created_at,
+      has_items: b.has_items || false,
     }))
   } catch (error) {
     console.error('Error fetching bills:', error)
@@ -249,19 +648,23 @@ export async function getBills() {
 }
 
 export async function addBill(bill) {
-  console.log('➕ [STORAGE] Adding bill for table', bill.tableNumber, '- Player:', bill.playerName)
+  console.log('➕ [STORAGE] Adding bill for counter', bill.counterId, '- Player:', bill.playerName)
   try {
     const { data, error } = await supabase
       .from('bills')
       .insert({
-        table_number: bill.tableNumber,
+        counter_id: bill.counterId,
+        counter_type: bill.counterType,
+        table_number: bill.tableNumber, // Keep for backward compatibility
         player_name: bill.playerName,
+        cashier_name: bill.cashierName,
         start_time: bill.startTime,
         end_time: bill.endTime,
         duration: bill.duration,
         price: bill.price,
         paid: bill.paid || false,
         paid_at: bill.paidAt || null,
+        has_items: bill.has_items || false,
       })
       .select()
       .single()
@@ -271,8 +674,11 @@ export async function addBill(bill) {
 
     return {
       id: data.id,
+      counterId: data.counter_id,
+      counterType: data.counter_type,
       tableNumber: data.table_number,
       playerName: data.player_name,
+      cashierName: data.cashier_name,
       startTime: data.start_time,
       endTime: data.end_time,
       duration: data.duration,
@@ -280,6 +686,7 @@ export async function addBill(bill) {
       paid: data.paid,
       paidAt: data.paid_at,
       createdAt: data.created_at,
+      has_items: data.has_items || false,
     }
   } catch (error) {
     console.error('Error adding bill:', error)
@@ -291,6 +698,8 @@ export async function updateBill(billId, updates) {
   try {
     // Convert camelCase to snake_case for Supabase
     const dbUpdates = {}
+    if ('counterId' in updates) dbUpdates.counter_id = updates.counterId
+    if ('counterType' in updates) dbUpdates.counter_type = updates.counterType
     if ('tableNumber' in updates) dbUpdates.table_number = updates.tableNumber
     if ('playerName' in updates) dbUpdates.player_name = updates.playerName
     if ('startTime' in updates) dbUpdates.start_time = updates.startTime
@@ -299,6 +708,7 @@ export async function updateBill(billId, updates) {
     if ('price' in updates) dbUpdates.price = updates.price
     if ('paid' in updates) dbUpdates.paid = updates.paid
     if ('paidAt' in updates) dbUpdates.paid_at = updates.paidAt
+    if ('has_items' in updates) dbUpdates.has_items = updates.has_items
 
     const { data, error } = await supabase
       .from('bills')
@@ -311,6 +721,8 @@ export async function updateBill(billId, updates) {
 
     return {
       id: data.id,
+      counterId: data.counter_id,
+      counterType: data.counter_type,
       tableNumber: data.table_number,
       playerName: data.player_name,
       startTime: data.start_time,
@@ -320,6 +732,7 @@ export async function updateBill(billId, updates) {
       paid: data.paid,
       paidAt: data.paid_at,
       createdAt: data.created_at,
+      has_items: data.has_items || false,
     }
   } catch (error) {
     console.error('Error updating bill:', error)
@@ -481,6 +894,7 @@ export async function getBillsInDateRange(startDate, endDate) {
       id: b.id,
       tableNumber: b.table_number,
       playerName: b.player_name,
+      cashierName: b.cashier_name,
       startTime: b.start_time,
       endTime: b.end_time,
       duration: b.duration,

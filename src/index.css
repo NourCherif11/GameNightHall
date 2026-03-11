@@ -10,8 +10,8 @@
     --card-foreground: 213 31% 91%;
     --popover: 224 71% 6%;
     --popover-foreground: 213 31% 91%;
-    --primary: 160 84% 39%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 38 100% 52%;
+    --primary-foreground: 0 0% 0%;
     --secondary: 222 47% 11%;
     --secondary-foreground: 213 31% 91%;
     --muted: 223 47% 11%;
@@ -22,7 +22,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 216 34% 17%;
     --input: 216 34% 17%;
-    --ring: 160 84% 39%;
+    --ring: 38 100% 52%;
     --radius: 0.75rem;
   }
 }
@@ -65,11 +65,11 @@
 
 /* Glow effects */
 .glow-emerald {
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.15), 0 0 60px rgba(16, 185, 129, 0.05);
+  box-shadow: 0 0 20px rgba(255, 180, 12, 0.15), 0 0 60px rgba(255, 180, 12, 0.05);
 }
 
 .glow-emerald-strong {
-  box-shadow: 0 0 20px rgba(16, 185, 129, 0.3), 0 0 60px rgba(16, 185, 129, 0.1);
+  box-shadow: 0 0 20px rgba(255, 180, 12, 0.3), 0 0 60px rgba(255, 180, 12, 0.1);
 }
 
 .glow-red {
@@ -82,7 +82,7 @@
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #10B981 0%, #06D6A0 50%, #34D399 100%);
+  background: linear-gradient(135deg, #ffb40c 0%, #ffc34d 50%, #ffa500 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -143,6 +143,7 @@
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }

@@ -35,23 +35,23 @@ import {
     Users,
     Check,
     UserCog,
+    Coffee,
 } from 'lucide-react'
 import { supabase } from '@/lib/supabaseClient'
 
 const navItems = [
-    { path: '/tables', label: 'Tables', icon: Grid3X3, description: 'Gérer les tables de billard' },
+    { path: '/compteurs', label: 'Compteurs', icon: Grid3X3, description: 'Gérer les compteurs' },
+    { path: '/boissons', label: 'Boissons', icon: Coffee, description: 'Vendre des boissons' },
     { path: '/bills', label: 'Factures', icon: Receipt, description: 'Voir & gérer les factures' },
     { path: '/players', label: 'Joueurs', icon: Users, description: 'Gérer les joueurs' },
     { path: '/dashboard', label: 'Tableau de bord', icon: LayoutDashboard, description: 'Analytiques & statistiques' },
 ]
 
 export default function Layout() {
-    const { user, logout } = useAuth()
-    const { settings, changeHourlyRate } = useApp()
+    const { user, logout, refreshUser } = useAuth()
+    const { settings } = useApp()
     const location = useLocation()
     const [sidebarOpen, setSidebarOpen] = useState(false)
-    const [editingRate, setEditingRate] = useState(false)
-    const [rateValue, setRateValue] = useState(settings.hourlyRate.toString())
     const [editProfileOpen, setEditProfileOpen] = useState(false)
     const [profileData, setProfileData] = useState({
         name: '',
@@ -64,24 +64,6 @@ export default function Layout() {
     const [profileSuccess, setProfileSuccess] = useState('')
 
     const currentPage = navItems.find(item => location.pathname.startsWith(item.path))
-
-    const handleRateDoubleClick = () => {
-        setRateValue(settings.hourlyRate.toString())
-        setEditingRate(true)
-    }
-
-    const handleRateSave = () => {
-        const newRate = parseFloat(rateValue)
-        if (!isNaN(newRate) && newRate > 0) {
-            changeHourlyRate(newRate)
-        }
-        setEditingRate(false)
-    }
-
-    const handleRateKeyDown = (e) => {
-        if (e.key === 'Enter') handleRateSave()
-        if (e.key === 'Escape') setEditingRate(false)
-    }
 
     const handleEditProfile = () => {
         setProfileData({
@@ -102,7 +84,7 @@ export default function Layout() {
 
         try {
             console.log('👤 [PROFILE] Updating profile...')
-            
+
             // Validate passwords match if provided
             if (profileData.newPassword || profileData.confirmPassword) {
                 if (profileData.newPassword !== profileData.confirmPassword) {
@@ -117,31 +99,61 @@ export default function Layout() {
                 }
             }
 
-            // Update user data
+            // Update user data - separate email changes from other updates
+            const hasEmailChange = profileData.email && profileData.email !== user?.email
             const updates = {}
-            if (profileData.email !== user?.email) {
-                updates.email = profileData.email
-            }
+            
             if (profileData.newPassword) {
                 updates.password = profileData.newPassword
             }
             if (profileData.name !== user?.name) {
-                updates.data = { name: profileData.name }
+                // Preserve role when updating name
+                updates.data = {
+                    name: profileData.name,
+                    role: user?.role || 'admin'
+                }
             }
 
+            // Apply name/password updates first
             if (Object.keys(updates).length > 0) {
                 const { error } = await supabase.auth.updateUser(updates)
-                
+
                 if (error) {
                     console.error('❌ [PROFILE] Update failed:', error.message)
                     setProfileError(error.message)
                     setProfileLoading(false)
                     return
                 }
-                
+
                 console.log('✅ [PROFILE] Profile updated successfully')
-                setProfileSuccess('Profil mis à jour avec succès!')
+
+                // Refresh user data from Supabase
+                await refreshUser()
+            }
+
+            // Handle email change separately (requires confirmation)
+            if (hasEmailChange) {
+                const { error: emailError } = await supabase.auth.updateUser({
+                    email: profileData.email
+                })
+
+                if (emailError) {
+                    console.error('❌ [PROFILE] Email update failed:', emailError.message)
+                    setProfileError(`Erreur email: ${emailError.message}`)
+                    setProfileLoading(false)
+                    return
+                }
+
+                console.log('✅ [PROFILE] Email confirmation sent')
+                setProfileSuccess('Un email de confirmation a été envoyé à votre nouvelle adresse')
                 
+                setTimeout(() => {
+                    setEditProfileOpen(false)
+                    setProfileSuccess('')
+                }, 3000)
+            } else if (Object.keys(updates).length > 0) {
+                setProfileSuccess('Profil mis à jour avec succès!')
+
                 // Close dialog after 1.5 seconds
                 setTimeout(() => {
                     setEditProfileOpen(false)
@@ -154,7 +166,7 @@ export default function Layout() {
             console.error('❌ [PROFILE] Error:', error)
             setProfileError('Une erreur est survenue')
         }
-        
+
         setProfileLoading(false)
     }
 
@@ -179,11 +191,11 @@ export default function Layout() {
                 {/* Logo */}
                 <div className="p-6 flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl overflow-hidden logo-container">
-                            <img src="/src/images/sademlogo.png" alt="Break Gaming Logo" className="w-full h-full object-cover logo-spin" />
+                        <div className="w-16 h-16 rounded-xl overflow-hidden logo-container">
+                            <img src="https://zvxvjztilxoqmadhukwc.supabase.co/storage/v1/object/public/images/gameparklogo.png" alt="GamePark Logo" className="w-full h-full object-cover logo-spin" />
                         </div>
                         <div>
-                            <h1 className="text-lg font-bold gradient-text">Break Gaming</h1>
+                            <h1 className="text-lg font-bold gradient-text">GamePark</h1>
                             <p className="text-xs text-muted-foreground">Système de gestion</p>
                         </div>
                     </div>
@@ -199,80 +211,57 @@ export default function Layout() {
 
                 {/* Navigation - takes available space but doesn't scroll */}
                 <nav className="flex-1 p-4 space-y-1 overflow-hidden">
-                    {navItems.map(item => (
-                        <NavLink
-                            key={item.path}
-                            to={item.path}
-                            onClick={() => setSidebarOpen(false)}
-                            className={({ isActive }) => `
+                    {navItems
+                        .filter(item => {
+                            // Hide dashboard for non-superadmin users
+                            if (item.path === '/dashboard' && user?.role !== 'superadmin') {
+                                return false
+                            }
+                            return true
+                        })
+                        .map(item => (
+                            <NavLink
+                                key={item.path}
+                                to={item.path}
+                                onClick={() => setSidebarOpen(false)}
+                                className={({ isActive }) => `
                 group flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-all duration-200
                 ${isActive
-                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 glow-emerald'
-                                    : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
-                                }
+                                        ? 'bg-orange-500/10 text-orange-400 border border-orange-500/20 glow-emerald'
+                                        : 'text-muted-foreground hover:text-foreground hover:bg-accent/50'
+                                    }
               `}
-                        >
-                            <item.icon className="w-5 h-5 shrink-0" />
-                            <div className="flex-1">
-                                <div>{item.label}</div>
-                                <div className="text-xs opacity-60 mt-0.5">{item.description}</div>
-                            </div>
-                            <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity" />
-                        </NavLink>
-                    ))}
+                            >
+                                <item.icon className="w-5 h-5 shrink-0" />
+                                <div className="flex-1">
+                                    <div>{item.label}</div>
+                                    <div className="text-xs opacity-60 mt-0.5">{item.description}</div>
+                                </div>
+                                <ChevronRight className="w-4 h-4 opacity-0 group-hover:opacity-50 transition-opacity" />
+                            </NavLink>
+                        ))}
                 </nav>
 
-                {/* Bottom section: Rate + User — always pinned at bottom */}
+                {/* Bottom section: User — always pinned at bottom */}
                 <div className="shrink-0 mt-auto">
-                    {/* Rate info */}
-                    <div className="px-4 pb-3">
-                        <div
-                            className="bg-emerald-500/5 border border-emerald-500/10 rounded-xl p-4 cursor-pointer select-none"
-                            onDoubleClick={handleRateDoubleClick}
-                            title="Double-cliquez pour modifier le tarif"
-                        >
-                            <div className="text-xs text-muted-foreground mb-1">Tarif horaire</div>
-                            {editingRate ? (
-                                <div className="flex items-center gap-2">
-                                    <Input
-                                        type="number"
-                                        value={rateValue}
-                                        onChange={(e) => setRateValue(e.target.value)}
-                                        onKeyDown={handleRateKeyDown}
-                                        onBlur={handleRateSave}
-                                        className="h-8 bg-background/50 text-lg font-bold text-emerald-400 font-mono-timer w-20"
-                                        autoFocus
-                                        min="1"
-                                        step="0.5"
-                                    />
-                                    <span className="text-sm text-muted-foreground">TND/h</span>
-                                    <Button size="sm" variant="ghost" onClick={handleRateSave} className="h-8 w-8 p-0 text-emerald-400">
-                                        <Check className="w-4 h-4" />
-                                    </Button>
-                                </div>
-                            ) : (
-                                <div className="text-2xl font-bold text-emerald-400 font-mono-timer">
-                                    {settings.hourlyRate} <span className="text-sm font-normal text-muted-foreground">TND/h</span>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-
-                    <Separator className="opacity-50" />
-
                     {/* User */}
                     <div className="p-4">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <button className="w-full flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-accent/50 transition-colors">
-                                    <Avatar className="h-9 w-9 border border-emerald-500/20">
-                                        <AvatarFallback className="bg-emerald-500/10 text-emerald-400 text-sm font-semibold">
+                                    <Avatar className="h-9 w-9 border border-orange-500/20">
+                                        <AvatarFallback className="bg-orange-500/10 text-orange-400 text-sm font-semibold">
                                             {user?.name?.charAt(0) || 'A'}
                                         </AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1 text-left">
                                         <div className="text-sm font-medium">{user?.name || 'Admin'}</div>
-                                        <div className="text-xs text-muted-foreground">Administrateur</div>
+                                        <div className="text-xs text-muted-foreground">
+                                            {(() => {
+                                                console.log('🎭 [LAYOUT] User role check:', user?.role)
+                                                return user?.role === 'superadmin' ? 'Super-Admin' : 'Caissier'
+                                            })()}
+                                        </div>
                                     </div>
                                 </button>
                             </DropdownMenuTrigger>
@@ -309,7 +298,7 @@ export default function Layout() {
                             Mettez à jour vos informations de compte
                         </DialogDescription>
                     </DialogHeader>
-                    
+
                     <div className="space-y-4 py-4">
                         <div className="space-y-2">
                             <Label htmlFor="profile-name">Nom</Label>
@@ -320,7 +309,7 @@ export default function Layout() {
                                 placeholder="Votre nom"
                             />
                         </div>
-                        
+
                         <div className="space-y-2">
                             <Label htmlFor="profile-email">Email</Label>
                             <Input
@@ -331,9 +320,9 @@ export default function Layout() {
                                 placeholder="votre@email.com"
                             />
                         </div>
-                        
+
                         <Separator />
-                        
+
                         <div className="space-y-2">
                             <Label htmlFor="profile-password">Nouveau mot de passe (optionnel)</Label>
                             <Input
@@ -344,7 +333,7 @@ export default function Layout() {
                                 placeholder="Laisser vide pour ne pas changer"
                             />
                         </div>
-                        
+
                         <div className="space-y-2">
                             <Label htmlFor="profile-confirm">Confirmer le mot de passe</Label>
                             <Input
@@ -355,20 +344,20 @@ export default function Layout() {
                                 placeholder="Confirmer le nouveau mot de passe"
                             />
                         </div>
-                        
+
                         {profileError && (
                             <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-3 py-2 rounded-lg">
                                 {profileError}
                             </div>
                         )}
-                        
+
                         {profileSuccess && (
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-sm px-3 py-2 rounded-lg">
+                            <div className="bg-orange-500/10 border border-orange-500/20 text-orange-400 text-sm px-3 py-2 rounded-lg">
                                 {profileSuccess}
                             </div>
                         )}
                     </div>
-                    
+
                     <DialogFooter>
                         <Button
                             variant="outline"
@@ -380,7 +369,7 @@ export default function Layout() {
                         <Button
                             onClick={handleSaveProfile}
                             disabled={profileLoading}
-                            className="bg-emerald-600 hover:bg-emerald-700"
+                            className="bg-orange-600 hover:bg-orange-700"
                         >
                             {profileLoading ? 'Enregistrement...' : 'Enregistrer'}
                         </Button>
@@ -401,14 +390,14 @@ export default function Layout() {
                                 <Menu className="w-5 h-5" />
                             </button>
                             <div>
-                                <h2 className="text-lg font-semibold">{currentPage?.label || 'Break Gaming'}</h2>
+                                <h2 className="text-lg font-semibold">{currentPage?.label || 'GamePark'}</h2>
                                 <p className="text-xs text-muted-foreground hidden sm:block">{currentPage?.description}</p>
                             </div>
                         </div>
 
                         <div className="flex items-center gap-3">
                             <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground bg-card/50 px-3 py-1.5 rounded-full border border-border/50">
-                                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                <div className="w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
                                 Système en ligne
                             </div>
                         </div>

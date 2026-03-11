@@ -13,12 +13,53 @@ export function formatDuration(seconds) {
 }
 
 export function formatPrice(dinars) {
-  return `${dinars.toFixed(2)} TND`
+  const value = dinars ?? 0
+  return `${value.toFixed(2)} TND`
 }
 
 export function calculatePrice(seconds, hourlyRate = 10) {
   const hours = seconds / 3600
   return Math.ceil(hours * hourlyRate * 100) / 100
+}
+
+/**
+ * Calculate price based on counter settings
+ * @param {number} seconds - Total elapsed time in seconds
+ * @param {object} settings - Counter pricing settings
+ * @param {number} settings.startingValue - Initial price (TND)
+ * @param {number} settings.incrementAmount - Amount to add per interval (TND)
+ * @param {number} settings.incrementInterval - Seconds between increments
+ * @param {number} settings.gracePeriod - Free seconds at start
+ * @param {number} multiplier - Price multiplier (default 1)
+ * @returns {number} - Calculated price in TND
+ */
+export function calculateCounterPrice(seconds, settings, multiplier = 1) {
+  const { startingValue = 0, incrementAmount = 2, incrementInterval = 900, gracePeriod = 300 } = settings
+
+  // Apply multiplier to pricing values
+  const adjustedStartingValue = startingValue * multiplier
+  const adjustedIncrementAmount = incrementAmount * multiplier
+
+  // If no grace period, calculate intervals normally from start
+  if (gracePeriod === 0) {
+    const intervals = Math.floor(seconds / incrementInterval)
+    return adjustedStartingValue + (intervals * adjustedIncrementAmount)
+  }
+
+  // During grace period, only charge starting value
+  if (seconds <= gracePeriod) {
+    return adjustedStartingValue
+  }
+
+  // After grace period, first increment happens immediately
+  // Then each subsequent increment happens every incrementInterval seconds
+  const secondsAfterGrace = seconds - gracePeriod
+  const intervals = Math.ceil(secondsAfterGrace / incrementInterval)
+
+  // Calculate total price
+  const totalPrice = adjustedStartingValue + (intervals * adjustedIncrementAmount)
+
+  return Math.max(0, totalPrice)
 }
 
 export function generateId() {

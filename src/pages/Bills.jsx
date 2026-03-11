@@ -1,5 +1,7 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { useApp } from '@/context/AppContext'
+import { useAuth } from '@/context/AuthContext'
+import { getBillItems } from '@/lib/storage'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -14,6 +16,7 @@ import {
     DialogDescription,
     DialogFooter,
 } from '@/components/ui/dialog'
+import PrintReceipt from '@/components/PrintReceipt'
 import { formatDuration, formatPrice, formatDate, formatTime, formatDateTime } from '@/lib/utils'
 import {
     Search,
@@ -26,11 +29,51 @@ import {
     Filter,
     CreditCard,
     Grid3X3,
+    ChevronDown,
+    ChevronUp,
+    Receipt,
+    Printer,
 } from 'lucide-react'
 
-function BillCard({ bill, onPay, onDelete }) {
+function BillCard({ bill, onPay, onDelete, user }) {
     const [showConfirmPay, setShowConfirmPay] = useState(false)
     const [showConfirmDelete, setShowConfirmDelete] = useState(false)
+    const [expanded, setExpanded] = useState(false)
+    const [billItems, setBillItems] = useState([])
+    const [loadingItems, setLoadingItems] = useState(false)
+    const [showPrint, setShowPrint] = useState(false)
+
+    const loadBillItems = () => {
+        if (bill.has_items && billItems.length === 0) {
+            setLoadingItems(true)
+            getBillItems(bill.id)
+                .then(items => setBillItems(items || []))
+                .catch(err => console.error('Error loading bill items:', err))
+                .finally(() => setLoadingItems(false))
+        }
+    }
+
+    useEffect(() => {
+        if (bill.has_items && expanded && billItems.length === 0) {
+            loadBillItems()
+        }
+    }, [bill.has_items, bill.id, expanded, billItems.length])
+
+    const handlePrint = () => {
+        if (bill.has_items && billItems.length === 0) {
+            // Load items first if not loaded
+            setLoadingItems(true)
+            getBillItems(bill.id)
+                .then(items => {
+                    setBillItems(items || [])
+                    setShowPrint(true)
+                })
+                .catch(err => console.error('Error loading bill items:', err))
+                .finally(() => setLoadingItems(false))
+        } else {
+            setShowPrint(true)
+        }
+    }
 
     return (
         <>
@@ -45,7 +88,7 @@ function BillCard({ bill, onPay, onDelete }) {
                             <div className={`
                 w-12 h-12 rounded-xl flex items-center justify-center shrink-0
                 ${bill.paid
-                                    ? 'bg-emerald-500/10 border border-emerald-500/20'
+                                    ? 'bg-orange-500/10 border border-orange-500/20'
                                     : 'bg-amber-500/10 border border-amber-500/20'
                                 }
               `}>
@@ -70,7 +113,7 @@ function BillCard({ bill, onPay, onDelete }) {
                         {/* Right: Price & Actions */}
                         <div className="flex items-center gap-3 sm:gap-4">
                             <div className="text-right">
-                                <div className="text-lg font-bold text-emerald-400 font-mono-timer">
+                                <div className="text-lg font-bold text-orange-400 font-mono-timer">
                                     {formatPrice(bill.price)}
                                 </div>
                                 <Badge variant={bill.paid ? 'success' : 'warning'} className="text-[10px]">
@@ -83,23 +126,101 @@ function BillCard({ bill, onPay, onDelete }) {
                                     <Button
                                         size="sm"
                                         onClick={() => setShowConfirmPay(true)}
-                                        className="bg-emerald-600 hover:bg-emerald-700 h-9"
+                                        className="bg-orange-600 hover:bg-orange-700 h-9"
                                     >
                                         <CreditCard className="w-3.5 h-3.5 mr-1" />
                                         Payer
                                     </Button>
                                     <Button
                                         size="sm"
-                                        variant="ghost"
-                                        onClick={() => setShowConfirmDelete(true)}
-                                        className="h-9 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                        onClick={handlePrint}
+                                        style={{ backgroundColor: '#fe8541' }}
+                                        className="hover:opacity-90 h-9 w-9 p-0"
+                                        title="Imprimer"
                                     >
-                                        <Trash2 className="w-3.5 h-3.5" />
+                                        <Printer className="w-3.5 h-3.5" />
                                     </Button>
+                                    {user?.role === 'superadmin' && (
+                                        <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            onClick={() => setShowConfirmDelete(true)}
+                                            className="h-9 text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </Button>
+                                    )}
                                 </div>
+                            )}
+                            {bill.paid && (
+                                <Button
+                                    size="sm"
+                                    onClick={handlePrint}
+                                    style={{ backgroundColor: '#fe8541' }}
+                                    className="hover:opacity-90 h-9 w-9 p-0"
+                                    title="Imprimer"
+                                >
+                                    <Printer className="w-3.5 h-3.5" />
+                                </Button>
                             )}
                         </div>
                     </div>
+
+                    {/* Itemized breakdown */}
+                    {bill.has_items && (
+                        <div className="mt-4 pt-4 border-t border-border/50">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="w-full justify-between h-auto py-2 text-muted-foreground hover:text-foreground"
+                                onClick={() => setExpanded(!expanded)}
+                            >
+                                <span className="flex items-center gap-2">
+                                    <Receipt className="w-4 h-4" />
+                                    <span className="text-sm font-medium">Détails de la facture</span>
+                                </span>
+                                {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                            </Button>
+
+                            {expanded && (
+                                <div className="mt-3 space-y-2 bg-muted/20 rounded-lg p-3">
+                                    {loadingItems ? (
+                                        <p className="text-sm text-muted-foreground text-center py-2">Chargement...</p>
+                                    ) : billItems.length > 0 ? (
+                                        <>
+                                            {bill.cashierName && (
+                                                <div className="flex justify-between text-sm pb-2 border-b border-border/50 mb-2">
+                                                    <span className="text-muted-foreground">Caissier:</span>
+                                                    <span className="font-medium">{bill.cashierName}</span>
+                                                </div>
+                                            )}
+                                            {billItems.map((item, idx) => (
+                                                <div key={idx} className="flex justify-between text-sm">
+                                                    <span className="text-muted-foreground">
+                                                        {item.quantity > 1 && `${item.quantity}x `}
+                                                        {item.itemName}
+                                                    </span>
+                                                    <span className="font-medium font-mono-timer">
+                                                        {formatPrice(item.totalPrice)}
+                                                    </span>
+                                                </div>
+                                            ))}
+                                            <div className="border-t border-border/50 pt-2 mt-2">
+                                                <div className="flex justify-between font-semibold">
+                                                    <span>Total:</span>
+                                                    <span className="text-orange-400 font-mono-timer">
+                                                        {formatPrice(bill.price)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <p className="text-sm text-muted-foreground text-center py-2">Aucun détail disponible</p>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 
@@ -108,7 +229,7 @@ function BillCard({ bill, onPay, onDelete }) {
                 <DialogContent className="sm:max-w-sm">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                            <CheckCircle2 className="w-5 h-5 text-orange-400" />
                             Confirmer le paiement
                         </DialogTitle>
                         <DialogDescription>
@@ -122,14 +243,14 @@ function BillCard({ bill, onPay, onDelete }) {
                         </div>
                         <div className="flex justify-between">
                             <span className="text-muted-foreground">Montant</span>
-                            <span className="text-lg font-bold text-emerald-400">{formatPrice(bill.price)}</span>
+                            <span className="text-lg font-bold text-orange-400">{formatPrice(bill.price)}</span>
                         </div>
                     </div>
                     <DialogFooter>
                         <Button variant="outline" onClick={() => setShowConfirmPay(false)}>Annuler</Button>
                         <Button
                             onClick={() => { onPay(bill.id); setShowConfirmPay(false) }}
-                            className="bg-emerald-600 hover:bg-emerald-700"
+                            className="bg-orange-600 hover:bg-orange-700"
                         >
                             <CheckCircle2 className="w-4 h-4 mr-2" />
                             Confirmer le paiement
@@ -162,12 +283,46 @@ function BillCard({ bill, onPay, onDelete }) {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Print Receipt Dialog */}
+            {showPrint && (
+                <Dialog open={showPrint} onOpenChange={setShowPrint}>
+                    <DialogContent className="max-w-md">
+                        <DialogHeader>
+                            <DialogTitle>Aperçu de l'impression</DialogTitle>
+                            <DialogDescription>
+                                Ticket prêt pour imprimante thermique
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="max-h-[60vh] overflow-y-auto border rounded-lg p-4" style={{ backgroundColor: '#f9fafb' }}>
+                            <PrintReceipt
+                                bill={bill}
+                                billItems={billItems}
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setShowPrint(false)}>
+                                Fermer
+                            </Button>
+                            <Button
+                                onClick={() => window.print()}
+                                style={{ backgroundColor: '#fe8541' }}
+                                className="hover:opacity-90"
+                            >
+                                <Printer className="w-4 h-4 mr-2" />
+                                Imprimer
+                            </Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+            )}
         </>
     )
 }
 
 export default function Bills() {
     const { bills, payBill, removeBill } = useApp()
+    const { user } = useAuth()
     const [search, setSearch] = useState('')
     const [tableFilter, setTableFilter] = useState('all')
 
@@ -213,12 +368,12 @@ export default function Bills() {
                 </Card>
                 <Card className="border-border/50 bg-card/50">
                     <CardContent className="p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                        <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                            <CheckCircle2 className="w-5 h-5 text-orange-400" />
                         </div>
                         <div>
                             <p className="text-xs text-muted-foreground">Total encaissé</p>
-                            <p className="text-xl font-bold text-emerald-400">{formatPrice(totalPaid)}</p>
+                            <p className="text-xl font-bold text-orange-400">{formatPrice(totalPaid)}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -242,7 +397,7 @@ export default function Bills() {
                             variant={tableFilter === t ? 'default' : 'outline'}
                             size="sm"
                             onClick={() => setTableFilter(t)}
-                            className={`h-10 ${tableFilter === t ? 'bg-emerald-600 hover:bg-emerald-700' : ''}`}
+                            className={`h-10 ${tableFilter === t ? 'bg-orange-600 hover:bg-orange-700' : ''}`}
                         >
                             {t === 'all' ? (
                                 <><Filter className="w-3.5 h-3.5 mr-1" /> Tout</>
@@ -261,7 +416,7 @@ export default function Bills() {
                         <AlertCircle className="w-4 h-4 mr-2" />
                         Impayées ({filterBills(unpaidBills).length})
                     </TabsTrigger>
-                    <TabsTrigger value="paid" className="data-[state=active]:bg-emerald-500/10 data-[state=active]:text-emerald-400">
+                    <TabsTrigger value="paid" className="data-[state=active]:bg-orange-500/10 data-[state=active]:text-orange-400">
                         <CheckCircle2 className="w-4 h-4 mr-2" />
                         Payées ({filterBills(paidBills).length})
                     </TabsTrigger>
@@ -284,6 +439,7 @@ export default function Bills() {
                                     bill={bill}
                                     onPay={payBill}
                                     onDelete={removeBill}
+                                    user={user}
                                 />
                             ))
                         )}
@@ -307,6 +463,7 @@ export default function Bills() {
                                     bill={bill}
                                     onPay={payBill}
                                     onDelete={removeBill}
+                                    user={user}
                                 />
                             ))
                         )}

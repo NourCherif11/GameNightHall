@@ -53,12 +53,12 @@ function TableCard({ table, onStart, onStop, onRename }) {
         <Card className={`
       relative overflow-hidden transition-all duration-500 card-hover
       ${isActive
-                ? 'border-emerald-500/30 glow-emerald-strong bg-gradient-to-br from-card to-emerald-950/20'
+                ? 'border-orange-500/30 glow-emerald-strong bg-gradient-to-br from-card to-emerald-950/20'
                 : 'border-border/50 hover:border-border bg-card'
             }
     `}>
             {isActive && (
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-emerald-500 via-emerald-400 to-teal-400" />
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-orange-500 via-orange-400 to-teal-400" />
             )}
 
             <CardContent className="p-6">
@@ -68,7 +68,7 @@ function TableCard({ table, onStart, onStop, onRename }) {
                         <div className={`
               w-12 h-12 rounded-xl flex items-center justify-center
               ${isActive
-                                ? 'bg-emerald-500/20 border border-emerald-500/30'
+                                ? 'bg-orange-500/20 border border-orange-500/30'
                                 : 'bg-muted border border-border'
                             }
             `}>
@@ -90,7 +90,7 @@ function TableCard({ table, onStart, onStop, onRename }) {
                                 </div>
                             ) : (
                                 <h3
-                                    className="font-semibold text-lg cursor-pointer hover:text-emerald-400 transition-colors"
+                                    className="font-semibold text-lg cursor-pointer hover:text-orange-400 transition-colors"
                                     onDoubleClick={handleDoubleClick}
                                     title="Double-cliquez pour renommer"
                                 >
@@ -98,7 +98,7 @@ function TableCard({ table, onStart, onStop, onRename }) {
                                 </h3>
                             )}
                             <div className="flex items-center gap-1.5">
-                                <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-emerald-400 animate-pulse' : 'bg-muted-foreground/30'}`} />
+                                <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-orange-400 animate-pulse' : 'bg-muted-foreground/30'}`} />
                                 <span className="text-xs text-muted-foreground">
                                     {isActive ? 'En session' : 'Disponible'}
                                 </span>
@@ -114,13 +114,13 @@ function TableCard({ table, onStart, onStop, onRename }) {
                 <div className={`
           rounded-xl p-6 mb-6 text-center
           ${isActive
-                        ? 'bg-emerald-500/5 border border-emerald-500/10'
+                        ? 'bg-orange-500/5 border border-orange-500/10'
                         : 'bg-muted/30 border border-border/50'
                     }
         `}>
                     <div className={`
             font-mono-timer text-4xl font-bold tracking-wider
-            ${isActive ? 'text-emerald-400' : 'text-muted-foreground/40'}
+            ${isActive ? 'text-orange-400' : 'text-muted-foreground/40'}
           `}>
                         {formatDuration(table.elapsed)}
                     </div>
@@ -131,8 +131,8 @@ function TableCard({ table, onStart, onStop, onRename }) {
                                 Début {formatTime(table.startTime)}
                             </div>
                             <div className="flex items-center gap-1.5">
-                                <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
-                                <span className="text-emerald-400 font-medium">{formatPrice(price)}</span>
+                                <DollarSign className="w-3.5 h-3.5 text-orange-400" />
+                                <span className="text-orange-400 font-medium">{formatPrice(price)}</span>
                             </div>
                         </div>
                     )}
@@ -151,7 +151,7 @@ function TableCard({ table, onStart, onStop, onRename }) {
                 ) : (
                     <Button
                         onClick={() => onStart(table.id)}
-                        className="w-full h-12 text-base font-semibold bg-emerald-600 hover:bg-emerald-700 shadow-lg shadow-emerald-500/20"
+                        className="w-full h-12 text-base font-semibold bg-orange-600 hover:bg-orange-700 shadow-lg shadow-orange-500/20"
                     >
                         <Play className="w-4 h-4 mr-2" />
                         Démarrer une session
@@ -220,8 +220,8 @@ export default function Tables() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Card className="border-border/50 bg-card/50">
                     <CardContent className="p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                            <Zap className="w-5 h-5 text-emerald-400" />
+                        <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                            <Zap className="w-5 h-5 text-orange-400" />
                         </div>
                         <div>
                             <p className="text-xs text-muted-foreground">Tables actives</p>
@@ -249,7 +249,7 @@ export default function Tables() {
                         </div>
                         <div>
                             <p className="text-xs text-muted-foreground">Revenu en cours</p>
-                            <p className="text-xl font-bold text-emerald-400">{formatPrice(totalRevenue)}</p>
+                            <p className="text-xl font-bold text-orange-400">{formatPrice(totalRevenue)}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -274,7 +274,7 @@ export default function Tables() {
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-xl">
-                            <ReceiptIcon className="w-5 h-5 text-emerald-400" />
+                            <ReceiptIcon className="w-5 h-5 text-orange-400" />
                             Session terminée
                         </DialogTitle>
                         <DialogDescription>
@@ -304,7 +304,7 @@ export default function Tables() {
                                 </div>
                                 <div className="border-t border-border/50 pt-3 flex justify-between">
                                     <span className="font-medium">Total</span>
-                                    <span className="text-xl font-bold text-emerald-400">{formatPrice(sessionInfo.price)}</span>
+                                    <span className="text-xl font-bold text-orange-400">{formatPrice(sessionInfo.price)}</span>
                                 </div>
                             </div>
 
@@ -329,7 +329,7 @@ export default function Tables() {
                                     <button
                                         onClick={() => setSelectedPlayer('Passager')}
                                         className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${selectedPlayer === 'Passager'
-                                                ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                                                ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
                                                 : 'hover:bg-accent/50 text-muted-foreground'
                                             }`}
                                     >
@@ -343,7 +343,7 @@ export default function Tables() {
                                             key={player.id}
                                             onClick={() => setSelectedPlayer(player.name)}
                                             className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2 ${selectedPlayer === player.name
-                                                    ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+                                                    ? 'bg-orange-500/15 text-orange-400 border border-orange-500/20'
                                                     : 'hover:bg-accent/50'
                                                 }`}
                                         >
@@ -379,7 +379,7 @@ export default function Tables() {
                                             className="h-9 bg-background/50 text-sm"
                                             autoFocus
                                         />
-                                        <Button size="sm" onClick={handleAddAndSelect} disabled={!newPlayerName.trim()} className="h-9 bg-emerald-600 hover:bg-emerald-700">
+                                        <Button size="sm" onClick={handleAddAndSelect} disabled={!newPlayerName.trim()} className="h-9 bg-orange-600 hover:bg-orange-700">
                                             <Plus className="w-3.5 h-3.5" />
                                         </Button>
                                         <Button size="sm" variant="ghost" onClick={() => { setShowAddPlayer(false); setNewPlayerName('') }} className="h-9">
@@ -390,7 +390,7 @@ export default function Tables() {
 
                                 {/* Selected display */}
                                 {selectedPlayer && (
-                                    <div className="text-sm text-emerald-400 flex items-center gap-2 bg-emerald-500/5 px-3 py-2 rounded-lg border border-emerald-500/10">
+                                    <div className="text-sm text-orange-400 flex items-center gap-2 bg-orange-500/5 px-3 py-2 rounded-lg border border-orange-500/10">
                                         <Check className="w-4 h-4" />
                                         Sélectionné : <strong>{selectedPlayer}</strong>
                                     </div>
@@ -406,7 +406,7 @@ export default function Tables() {
                         <Button
                             onClick={handleSaveBill}
                             disabled={saving}
-                            className="bg-emerald-600 hover:bg-emerald-700"
+                            className="bg-orange-600 hover:bg-orange-700"
                         >
                             {saving ? (
                                 <div className="flex items-center gap-2">

@@ -23,7 +23,7 @@ const DAY_SHORT_FR = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam']
 
 function StatCard({ icon: Icon, label, value, subValue, trend, color = 'emerald' }) {
     const colorMap = {
-        emerald: 'bg-emerald-500/10 text-emerald-400',
+        emerald: 'bg-orange-500/10 text-orange-400',
         blue: 'bg-blue-500/10 text-blue-400',
         amber: 'bg-amber-500/10 text-amber-400',
         purple: 'bg-purple-500/10 text-purple-400',
@@ -39,7 +39,7 @@ function StatCard({ icon: Icon, label, value, subValue, trend, color = 'emerald'
                         <Icon className="w-5 h-5" />
                     </div>
                     {trend !== undefined && (
-                        <div className={`flex items-center gap-1 text-xs ${trend >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <div className={`flex items-center gap-1 text-xs ${trend >= 0 ? 'text-orange-400' : 'text-red-400'}`}>
                             {trend >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                             {Math.abs(trend)}%
                         </div>
@@ -273,7 +273,7 @@ export default function Dashboard() {
                     disabled={isSeeding}
                     variant="default"
                     size="sm"
-                    className="bg-emerald-500 hover:bg-emerald-600"
+                    className="bg-orange-500 hover:bg-orange-600"
                 >
                     <Database className="w-4 h-4 mr-2" />
                     {isSeeding ? 'Ajout...' : 'Remplir la DB'}
@@ -318,7 +318,7 @@ export default function Dashboard() {
                 <StatCard
                     icon={Timer}
                     label="Durée moy. de session"
-                    value={`${Math.floor(analytics.avgDuration / 60)}h ${analytics.avgDuration % 60}m`}
+                    value={`${Math.floor(analytics.avgDuration / 60)}m ${analytics.avgDuration % 60}s`}
                     color="amber"
                 />
                 <StatCard
@@ -349,7 +349,7 @@ export default function Dashboard() {
                 <Card className="border-border/50 bg-card/50">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-base flex items-center gap-2">
-                            <TrendingUp className="w-4 h-4 text-emerald-400" />
+                            <TrendingUp className="w-4 h-4 text-orange-400" />
                             Tendance des revenus (14 jours)
                         </CardTitle>
                         <CardDescription>Aperçu des revenus quotidiens</CardDescription>
@@ -469,7 +469,7 @@ export default function Dashboard() {
                 <Card className="border-border/50 bg-card/50 lg:col-span-2">
                     <CardHeader className="pb-2">
                         <CardTitle className="text-base flex items-center gap-2">
-                            <CalendarDays className="w-4 h-4 text-emerald-400" />
+                            <CalendarDays className="w-4 h-4 text-orange-400" />
                             Tendance mensuelle des revenus
                         </CardTitle>
                         <CardDescription>Aperçu des 6 derniers mois</CardDescription>
@@ -533,7 +533,7 @@ export default function Dashboard() {
                                         <div className="text-xs text-muted-foreground">{player.sessions} sessions</div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="text-sm font-bold text-emerald-400">{formatPrice(player.revenue)}</div>
+                                        <div className="text-sm font-bold text-orange-400">{formatPrice(player.revenue)}</div>
                                     </div>
                                 </div>
                             ))}
@@ -571,7 +571,7 @@ export default function Dashboard() {
                                     <div className="text-xs text-muted-foreground mb-1">{day.day}</div>
                                     <div className="text-2xl font-bold font-mono-timer">{day.sessions}</div>
                                     <div className="text-xs text-muted-foreground mt-1">sessions</div>
-                                    <div className="text-xs text-emerald-400 mt-0.5 font-medium">{formatPrice(day.revenue)}</div>
+                                    <div className="text-xs text-orange-400 mt-0.5 font-medium">{formatPrice(day.revenue)}</div>
                                     <div className="text-[10px] text-muted-foreground mt-0.5">~{day.avgDuration}min moy.</div>
                                 </div>
                             )
@@ -584,8 +584,8 @@ export default function Dashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="border-border/50 bg-card/50">
                     <CardContent className="p-6 text-center">
-                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-3">
-                            <span className="text-2xl font-bold text-emerald-400">{analytics.collectionRate}%</span>
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-orange-500/10 border border-orange-500/20 mb-3">
+                            <span className="text-2xl font-bold text-orange-400">{analytics.collectionRate}%</span>
                         </div>
                         <h3 className="font-medium">Taux d'encaissement</h3>
                         <p className="text-xs text-muted-foreground mt-1">Factures payées vs total</p>

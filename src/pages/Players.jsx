@@ -29,8 +29,8 @@ function PlayerCard({ player, stats, onEdit, onDelete }) {
                 <CardContent className="p-5">
                     <div className="flex items-start gap-4">
                         {/* Avatar */}
-                        <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
-                            <span className="text-lg font-bold text-emerald-400">
+                        <div className="w-12 h-12 rounded-xl bg-orange-500/10 border border-orange-500/20 flex items-center justify-center shrink-0">
+                            <span className="text-lg font-bold text-orange-400">
                                 {player.name.charAt(0).toUpperCase()}
                             </span>
                         </div>
@@ -61,8 +61,8 @@ function PlayerCard({ player, stats, onEdit, onDelete }) {
                                     <span>{stats.sessions} sessions</span>
                                 </div>
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                    <DollarSign className="w-3 h-3 text-emerald-400" />
-                                    <span className="text-emerald-400 font-medium">{formatPrice(stats.totalSpent)}</span>
+                                    <DollarSign className="w-3 h-3 text-orange-400" />
+                                    <span className="text-orange-400 font-medium">{formatPrice(stats.totalSpent)}</span>
                                 </div>
                                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                                     <Clock className="w-3 h-3" />
@@ -179,8 +179,8 @@ export default function Players() {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Card className="border-border/50 bg-card/50">
                     <CardContent className="p-4 flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
-                            <Users className="w-5 h-5 text-emerald-400" />
+                        <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
+                            <Users className="w-5 h-5 text-orange-400" />
                         </div>
                         <div>
                             <p className="text-xs text-muted-foreground">Total joueurs</p>
@@ -195,7 +195,7 @@ export default function Players() {
                         </div>
                         <div>
                             <p className="text-xs text-muted-foreground">Revenu total joueurs</p>
-                            <p className="text-xl font-bold text-emerald-400">{formatPrice(totalRevenue)}</p>
+                            <p className="text-xl font-bold text-orange-400">{formatPrice(totalRevenue)}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -207,7 +207,7 @@ export default function Players() {
                         <div>
                             <Button
                                 onClick={() => { setFormName(''); setFormPhone(''); setFormNotes(''); setShowAddDialog(true) }}
-                                className="bg-emerald-600 hover:bg-emerald-700 h-9"
+                                className="bg-orange-600 hover:bg-orange-700 h-9"
                             >
                                 <UserPlus className="w-4 h-4 mr-2" />
                                 Ajouter un joueur
@@ -243,7 +243,7 @@ export default function Players() {
                             {!search && (
                                 <Button
                                     onClick={() => { setFormName(''); setFormPhone(''); setFormNotes(''); setShowAddDialog(true) }}
-                                    className="mt-4 bg-emerald-600 hover:bg-emerald-700"
+                                    className="mt-4 bg-orange-600 hover:bg-orange-700"
                                 >
                                     <UserPlus className="w-4 h-4 mr-2" />
                                     Ajouter un joueur
@@ -270,7 +270,7 @@ export default function Players() {
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <UserPlus className="w-5 h-5 text-emerald-400" />
+                            <UserPlus className="w-5 h-5 text-orange-400" />
                             Ajouter un joueur
                         </DialogTitle>
                         <DialogDescription>
@@ -325,7 +325,7 @@ export default function Players() {
                         <Button
                             onClick={handleAdd}
                             disabled={!formName.trim()}
-                            className="bg-emerald-600 hover:bg-emerald-700"
+                            className="bg-orange-600 hover:bg-orange-700"
                         >
                             <UserPlus className="w-4 h-4 mr-2" />
                             Ajouter
@@ -339,7 +339,7 @@ export default function Players() {
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2">
-                            <Edit3 className="w-5 h-5 text-emerald-400" />
+                            <Edit3 className="w-5 h-5 text-orange-400" />
                             Modifier le joueur
                         </DialogTitle>
                         <DialogDescription>
@@ -394,7 +394,7 @@ export default function Players() {
                         <Button
                             onClick={handleSaveEdit}
                             disabled={!formName.trim()}
-                            className="bg-emerald-600 hover:bg-emerald-700"
+                            className="bg-orange-600 hover:bg-orange-700"
                         >
                             <Edit3 className="w-4 h-4 mr-2" />
                             Enregistrer
